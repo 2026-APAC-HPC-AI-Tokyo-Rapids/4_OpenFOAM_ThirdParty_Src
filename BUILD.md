@@ -40,11 +40,11 @@ Usage: makeFFTW [OPTION] [fftw-VERSION]
 
 0. Review the [system requirements][link openfoam-require]
    and decide on the following:
-   * compiler type/version - if the system compiler is not relatively recent,
+   - compiler type/version - if the system compiler is not relatively recent,
      you will need a [third-party compiler](#makeGcc) installation.
-   * MPI type/version.
-   * ParaView type/version.
-   * CMake type/version, ...
+   - MPI type/version.
+   - ParaView type/version.
+   - CMake type/version, ...
 1. If you are using a system MPI (eg, openmpi), ensure that this environment
    has also been properly activated for your user.
    Often (but not always) a `mpi-selector` command is available for this purpose.
@@ -135,7 +135,7 @@ CC=clang CXX=clang++  ./makeGcc gmp-6.1.2 mpfr-4.0.0 gcc-system
 gmp_version=gmp-6.1.2
 mpfr_version=mpfr-4.0.0
 export GMP_ARCH_PATH=$WM_THIRD_PARTY_DIR/platforms/$WM_ARCH$WM_COMPILER_ARCH/$gmp_version
-export GMP_ARCH_PATH=$WM_THIRD_PARTY_DIR/platforms/$WM_ARCH$WM_COMPILER_ARCH/$mpfr_version
+export MPFR_ARCH_PATH=$WM_THIRD_PARTY_DIR/platforms/$WM_ARCH$WM_COMPILER_ARCH/$mpfr_version
 ```
 * Update update the OpenFOAM environment (eg, `wmRefresh`) again.
 
@@ -207,6 +207,9 @@ export GMP_ARCH_PATH=$WM_THIRD_PARTY_DIR/platforms/$WM_ARCH$WM_COMPILER_ARCH/$mp
 - Possibly needed for `makeParaView`.
 - The associated `etc/relocateQt` may be of independent use.
   Read the file for more details.
+
+`makeUMPIRE`
+- Build umpire memory pool
 
 `makeGperftools`
 - Build gperftools (originally Google Performance Tools)
@@ -423,6 +426,7 @@ you may have additional hurdles to using the newest versions of clang.
 | [PETSC][page PETSC]   | [download][link PETSC]
 | [HYPRE][page HYPRE]   | [repo][repo HYPRE] or [download][link HYPRE]
 | [ADF/CGNS][page CGNS], ccm | [link ccmio][link ccmio]
+| [Umpire][page umpire] | [repo][repo umpire] or [download][link umpire]
 | gperftools            | [repo][repo gperftools] or [download][link gperftools]
 
 
@@ -531,7 +535,7 @@ easier to use `grep` and find the relevant pages and links.
 
 [page hdf5]:      https://www.hdfgroup.org
 [repo hdf5]:      https://github.com/HDFGroup/hdf5
-[link hdf5]:      https://github.com/HDFGroup/hdf5/archive/refs/tags/hdf5_1.14.4.3.tar.gz
+[link hdf5]:      https://github.com/HDFGroup/hdf5/archive/refs/tags/hdf5_1.14.6.tar.gz
 
 [page zfp]:       http://computation.llnl.gov/projects/floating-point-compression/zfp-versions
 
@@ -544,6 +548,7 @@ easier to use `grep` and find the relevant pages and links.
 [link scotch61_3]:   https://gitlab.inria.fr/scotch/scotch/-/archive/v6.1.3/scotch-v6.1.3.tar.gz
 [older scotch]:   https://gforge.inria.fr/frs/download.php/file/38352/scotch_6.1.0.tar.gz
 [newer scotch]:   https://gitlab.inria.fr/scotch/scotch/-/archive/v7.0.1/scotch-v7.0.1.tar.gz
+[newest scotch]:  https://gitlab.inria.fr/scotch/scotch/-/archive/v7.0.6/scotch-v7.0.10.tar.gz
 
 [page kahip]:     http://algo2.iti.kit.edu/documents/kahip/
 [older kahip]:    https://github.com/KaHIP/KaHIP/archive/v3.14.tar.gz
@@ -557,7 +562,8 @@ easier to use `grep` and find the relevant pages and links.
 [link openmpi]:   https://download.open-mpi.org/release/open-mpi/v4.1/openmpi-4.1.2.tar.bz2
 
 [page mpich]:     http://www.mpich.org/
-[link mpich]:     http://www.mpich.org/static/downloads/3.4.2/mpich-3.4.2.tar.gz
+[older mpich]:    http://www.mpich.org/static/downloads/3.4.2/mpich-3.4.2.tar.gz
+[link mpich]:     https://www.mpich.org/static/downloads/4.2.3/mpich-4.2.3.tar.gz
 
 [page mvpapich]:  http://mvapich.cse.ohio-state.edu/
 [link mvpapich]:  https://mvapich.cse.ohio-state.edu/download/mvapich/mv2/mvapich2-2.3.7-1.tar.gz
@@ -589,11 +595,15 @@ easier to use `grep` and find the relevant pages and links.
 [repo gperftools]: https://github.com/gperftools/gperftools
 [link gperftools]: https://github.com/gperftools/gperftools/releases/download/gperftools-2.5/gperftools-2.5.tar.gz
 
+[page umpire]: https://umpire.readthedocs.io/en/develop/
+[repo umpire]: https://github.com/LLNL/Umpire
+[link umpire]: https://github.com/LLNL/Umpire/releases/tag/v2025.03.0
+
 [page zlib]:      https://www.zlib.net/
 [link zlib]:      https://sourceforge.net/projects/libpng/files/zlib/1.2.11/zlib-1.2.11.tar.xz
 
 
-<!-- profilint -->
+<!-- profiling -->
 
 [link extrae]:     https://github.com/bsc-performance-tools/extrae/archive/refs/tags/4.1.7.tar.gz
 [link libunwind]:  https://github.com/libunwind/libunwind/releases/download/v1.8.1/libunwind-1.8.1.tar.gz
@@ -601,16 +611,18 @@ easier to use `grep` and find the relevant pages and links.
 
 <!-- Visualization -->
 
-[page ParaView]:  http://www.paraview.org/
+[page ParaView]:  https://www.paraview.org/
 [download ParaView]: https://www.paraview.org/download/
-[link ParaView56]: http://www.paraview.org/files/v5.6/ParaView-v5.6.3.tar.xz
-[link ParaView57]: http://www.paraview.org/files/v5.7/ParaView-v5.7.0.tar.xz
-[link ParaView58]: http://www.paraview.org/files/v5.8/ParaView-v5.8.1.tar.xz
-[link ParaView59]: http://www.paraview.org/files/v5.9/ParaView-v5.9.1.tar.xz
-[link ParaView510]: http://www.paraview.org/files/v5.10/ParaView-v5.10.1.tar.xz
-[link ParaView511]: http://www.paraview.org/files/v5.11/ParaView-v5.11.2.tar.xz
-[link ParaView512]: http://www.paraview.org/files/v5.12/ParaView-v5.12.1.tar.xz
-[link ParaView]:    http://www.paraview.org/files/v5.12/ParaView-v5.12.1.tar.xz
+[link ParaView56]: https://www.paraview.org/files/v5.6/ParaView-v5.6.3.tar.xz
+[link ParaView57]: https://www.paraview.org/files/v5.7/ParaView-v5.7.0.tar.xz
+[link ParaView58]: https://www.paraview.org/files/v5.8/ParaView-v5.8.1.tar.xz
+[link ParaView59]: https://www.paraview.org/files/v5.9/ParaView-v5.9.1.tar.xz
+[link ParaView510]: https://www.paraview.org/files/v5.10/ParaView-v5.10.1.tar.xz
+[link ParaView511]: https://www.paraview.org/files/v5.11/ParaView-v5.11.2.tar.xz
+[link ParaView512]: https://www.paraview.org/files/v5.12/ParaView-v5.12.1.tar.xz
+[link ParaView513]: https://www.paraview.org/files/v5.13/ParaView-v5.13.2.tar.xz
+[link ParaView]:    https://www.paraview.org/files/v5.13/ParaView-v5.13.2.tar.xz
+[link ParaView]:    https://www.paraview.org/files/v6.0/ParaView-v6.0.1.tar.xz
 
 [page mesa]:  http://mesa3d.org/
 [link mesa]:  ftp://ftp.freedesktop.org/pub/mesa/mesa-17.1.1.tar.xz
@@ -624,4 +636,4 @@ easier to use `grep` and find the relevant pages and links.
 
 ---
 
-Copyright 2016-2024 OpenCFD Ltd
+Copyright 2016-2025 OpenCFD Ltd
