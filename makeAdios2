@@ -5,7 +5,7 @@
 #   \\  /    A nd           | www.openfoam.com
 #    \\/     M anipulation  |
 #------------------------------------------------------------------------------
-#     Copyright (C) 2018-2023 OpenCFD Ltd.
+#     Copyright (C) 2018-2025 OpenCFD Ltd.
 #------------------------------------------------------------------------------
 # License
 #     This file is part of OpenFOAM, distributed under GPL-3.0-or-later.
@@ -31,10 +31,13 @@ then
 
     package="adios2"
     libName="libadios2"
+    libName1="libadios2_cxx_mpi"
     libName2="libadios2_cxx11_mpi"
     for lib in \
         "$dir/lib/$libName$EXT_SO" \
         "$dir/lib$WM_COMPILER_LIB_ARCH/$libName$EXT_SO" \
+        "$dir/lib/$libName1$EXT_SO" \
+        "$dir/lib$WM_COMPILER_LIB_ARCH/$libName1$EXT_SO" \
         "$dir/lib/$libName2$EXT_SO" \
         "$dir/lib$WM_COMPILER_LIB_ARCH/$libName2$EXT_SO" \
         ;

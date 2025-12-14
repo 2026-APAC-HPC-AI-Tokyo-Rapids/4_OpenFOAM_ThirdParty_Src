@@ -5,7 +5,7 @@
 #   \\  /    A nd           | www.openfoam.com
 #    \\/     M anipulation  |
 #------------------------------------------------------------------------------
-#     Copyright (C) 2024 OpenCFD Ltd.
+#     Copyright (C) 2024-2025 OpenCFD Ltd.
 #------------------------------------------------------------------------------
 # License
 #     This file is part of OpenFOAM, distributed under GPL-3.0-or-later.
@@ -21,6 +21,9 @@
 #------------------------------------------------------------------------------
 # Dynamic library ending (default is .so)
 [ "$(uname -s)" = Darwin ] && EXT_SO=.dylib || EXT_SO=.so
+
+unset withMPI
+case "$WM_MPLIB" in (*MPI*) [ "$FOAM_MPI" = dummy ] || withMPI=true ;; esac
 
 # Short-circuit test for an installation
 if [ "$1" = "-test" ]
@@ -80,6 +83,7 @@ options:
   -gcc              Force use of gcc/g++
   -cmake PATH       With cmake from the given path
   -mpi-home PATH    With hint for MPI_HOME
+  -no-mpi           Suppress MPI build
   -DNAME=VALUE      add cmake variable
   -list             List available unpacked source versions
   -help             Display usage help
@@ -117,6 +121,7 @@ do
         case "${MPI_HOME:-none}" in (false|none) unset MPI_HOME;; esac
         shift
         ;;
+    -no-mpi)    unset withMPI ;;
 
     hdf/* | hdf5/* | sources/hdf* | \
     hdf5[-_][0-9]* | hdf5-git* )
@@ -179,8 +184,13 @@ echo ========================================
 echo "Build hdf5 library $PACKAGE for $FOAM_MPI"
 echo
 
-# Needs future adjustment
-# - for mpi-specific library locations
+# Install with an MPI-specfic location
+if [ "$FOAM_MPI" != dummy ]
+then
+    PKG_PREFIX="${PKG_PREFIX}/${FOAM_MPI}"
+fi
+
+# May need further adjustment...
 if [ -z "$optForce" ] \
 && [ -f "$PKG_PREFIX/include/hdf5.h" ] \
 && {
@@ -213,15 +223,15 @@ else
 
         cmake=$(findCMake)
 
-        # Installs into lib64/
+        # Installs into lib/
         cd "$PKG_BUILD" && set -x && \
         ${cmake:?} \
             -DCMAKE_INSTALL_PREFIX="$PKG_PREFIX" \
             -DCMAKE_BUILD_TYPE=Release \
-            -DHDF5_BUILD_FORTRAN=FALSE \
-            -DHDF5_BUILD_TESTING=FALSE \
-            -DHDF5_BUILD_STATIC_LIBS=FALSE \
+            -DBUILD_TESTING=FALSE \
+            -DBUILD_STATIC_LIBS=FALSE \
             ${WM_QUIET:+-DCMAKE_RULE_MESSAGES=OFF} \
+            -DHDF5_BUILD_FORTRAN=FALSE \
             "$PKG_SOURCE" \
         && make -j $WM_NCOMPPROCS all \
         && make install \
