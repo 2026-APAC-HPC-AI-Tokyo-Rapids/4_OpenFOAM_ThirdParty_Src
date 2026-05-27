@@ -7,6 +7,7 @@
 #    \\/     M anipulation  |
 #------------------------------------------------------------------------------
 #     Copyright (C) 2017-2021 OpenCFD Ltd.
+#     Copyright (C) 2026 Keysight Technologies
 #------------------------------------------------------------------------------
 # License
 #     This file is part of OpenFOAM, distributed under GPL-3.0-or-later.
@@ -23,15 +24,16 @@
 # Dynamic library ending (default is .so)
 [ "$(uname -s)" = Darwin ] && EXT_SO=.dylib || EXT_SO=.so
 
-# Short-circuit test for an installation
-if [ "$1" = "-test" ]
-then
-    [ "$#" -eq 2 ] || { echo "${0##*/} -test : needs 1 argument"; exit 1; }
-    dir="${2%/}" # <- *_ARCH_PATH
-    [ -d "$dir/include" ] || exit 2
+# Test for library existence
+have_metis_lib()
+{
+    local dir="${1%/}"  # <- *_ARCH_PATH
+    local verbose="$2"
+    [ -d "$dir" ] || return 2
 
-    package="metis"
-    libName="libmetis"
+    local lib
+    local package="metis"
+    local libName="libmetis"
     for lib in \
         "$FOAM_EXT_LIBBIN/$libName$EXT_SO" \
         "$dir/lib/$libName.a" \
@@ -42,12 +44,24 @@ then
     do
         if [ -r "$lib" ]
         then
-            echo "    $package include: $dir/include"
-            echo "    $package library: ${lib%/*}"
-            exit 0
+            if [ -n "$verbose" ]
+            then
+                echo "    $package include: $dir/include"
+                echo "    $package library: ${lib%/*} (${lib##*/})"
+            fi
+            return 0
         fi
     done
-    exit 2
+    return 2
+}
+
+# Short-circuit test for an installation
+if [ "$1" = "-test" ]
+then
+    [ "$#" -eq 2 ] || { echo "${0##*/} -test : needs 1 argument"; exit 1; }
+    [ -d "$2/include" ] || exit 2  # Require include/ dir
+    have_metis_lib "$2" -verbose
+    exit $?
 fi
 #------------------------------------------------------------------------------
 if :    # Run from third-party directory

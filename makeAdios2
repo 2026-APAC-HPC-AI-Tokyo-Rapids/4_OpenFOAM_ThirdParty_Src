@@ -6,6 +6,7 @@
 #    \\/     M anipulation  |
 #------------------------------------------------------------------------------
 #     Copyright (C) 2018-2025 OpenCFD Ltd.
+#     Copyright (C) 2026 Keysight Technologies
 #------------------------------------------------------------------------------
 # License
 #     This file is part of OpenFOAM, distributed under GPL-3.0-or-later.
@@ -22,17 +23,22 @@
 # Dynamic library ending (default is .so)
 [ "$(uname -s)" = Darwin ] && EXT_SO=.dylib || EXT_SO=.so
 
-# Short-circuit test for an installation
-if [ "$1" = "-test" ]
-then
-    [ "$#" -eq 2 ] || { echo "${0##*/} -test : needs 1 argument"; exit 1; }
-    dir="${2%/}" # <- *_ARCH_PATH
-    [ -d "$dir/include" ] || exit 2
+unset withMPI
+case "$WM_MPLIB" in (*MPI*) [ "$FOAM_MPI" = dummy ] || withMPI=true ;; esac
 
-    package="adios2"
-    libName="libadios2"
-    libName1="libadios2_cxx_mpi"
-    libName2="libadios2_cxx11_mpi"
+# Test for library existence
+have_adios_lib()
+{
+    local dir="${1%/}"  # <- *_ARCH_PATH (may also include MPI-specific)
+    local verbose="$2"
+    [ -d "$dir" ] || return 2
+
+    local lib
+    local package="adios2"
+    local libName="libadios2"
+    local libName1="libadios2_cxx_mpi"
+    local libName2="libadios2_cxx11_mpi"
+
     for lib in \
         "$dir/lib/$libName$EXT_SO" \
         "$dir/lib$WM_COMPILER_LIB_ARCH/$libName$EXT_SO" \
@@ -44,12 +50,24 @@ then
     do
         if [ -r "$lib" ]
         then
-            echo "    $package include: $dir/include"
-            echo "    $package library: ${lib%/*}"
-            exit 0
+            if [ -n "$verbose" ]
+            then
+                echo "    $package include: $dir/include"
+                echo "    $package library: ${lib%/*} (${lib##*/})"
+            fi
+            return 0
         fi
     done
-    exit 2
+    return 2
+}
+
+# Short-circuit test for an installation
+if [ "$1" = "-test" ]
+then
+    [ "$#" -eq 2 ] || { echo "${0##*/} -test : needs 1 argument"; exit 1; }
+    [ -d "$2/include" ] || exit 2  # Require include/ dir
+    have_adios_lib "$2" -verbose
+    exit $?
 fi
 #------------------------------------------------------------------------------
 if :    # Run from third-party directory
@@ -178,16 +196,22 @@ export GIT_DIR="$PKG_SOURCE/.git"
 echo
 echo ========================================
 echo "Build adios library $PACKAGE for $FOAM_MPI"
+
+# For OpenFOAM-v2512 and earlier, was not MPI-qualified
+if [ "${FOAM_API:-0}" -le 2512 ]
+then
+    echo "... install in standard location"
+elif [ "$FOAM_MPI" != dummy ]
+then
+    echo "... install with an MPI-specfic location"
+    PKG_PREFIX="${PKG_PREFIX}/${FOAM_MPI}"
+fi
 echo
 
-# Needs future adjustment
-# - for mpi-specific library locations
+# May need further adjustment...
 if [ -z "$optForce" ] \
 && [ -f "$PKG_PREFIX/include/adios2.h" ] \
-&& {
-    [ -r "$PKG_PREFIX/lib/libadios2$EXT_SO" ] \
- || [ -r "$PKG_PREFIX/lib$WM_COMPILER_LIB_ARCH/libadios2$EXT_SO" ]
-}
+&& have_adios_lib "$PKG_PREFIX"
 then
     echo "    ADIOS2 already built : $PKG_PREFIX"
 else
@@ -195,7 +219,14 @@ else
     echo "Starting build: $PACKAGE (using cmake)"
     echo
     (
+        # Use mpi-specific build location
         PKG_BUILD="$buildBASE/$PACKAGE"
+        if [ "$FOAM_MPI" = dummy ]
+        then
+            PKG_BUILD="${PKG_BUILD}-serial"
+        else
+            PKG_BUILD="${PKG_BUILD}-${FOAM_MPI:-serial}"
+        fi
         cd "$PKG_SOURCE" || exit
 
         applyPatch "$PACKAGE" "$PKG_SOURCE"
@@ -205,12 +236,17 @@ else
         rm -rf "$PKG_BUILD"
         mkdir -p "$PKG_BUILD"
 
+        unset pkgOptions parallelOpts
+
         # May not work properly with FOAM_MPI = dummy
         if [ "$FOAM_MPI" != dummy ]
         then
             CC=mpicc
             CXX=mpicxx
         fi
+
+        # Generally do not need HDF5 thru ADIOS
+        pkgOptions="$pkgOptions -DADIOS2_USE_HDF5=OFF -DADIOS2_USE_HDF5_VOL=OFF"
 
         cmake=$(findCMake)
 
@@ -222,6 +258,8 @@ else
             -DADIOS2_USE_Fortran=FALSE \
             -DADIOS2_BUILD_EXAMPLES=FALSE \
             ${WM_QUIET:+-DCMAKE_RULE_MESSAGES=OFF} \
+            $pkgOptions \
+            $parallelOpts \
             "$PKG_SOURCE" \
         && make -j $WM_NCOMPPROCS all \
         && make install \

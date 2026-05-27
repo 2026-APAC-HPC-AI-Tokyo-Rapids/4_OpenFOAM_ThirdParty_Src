@@ -6,6 +6,7 @@
 #    \\/     M anipulation  |
 #------------------------------------------------------------------------------
 #     Copyright (C) 2024-2025 OpenCFD Ltd.
+#     Copyright (C) 2026 Keysight Technologies
 #------------------------------------------------------------------------------
 # License
 #     This file is part of OpenFOAM, distributed under GPL-3.0-or-later.
@@ -25,15 +26,17 @@
 unset withMPI
 case "$WM_MPLIB" in (*MPI*) [ "$FOAM_MPI" = dummy ] || withMPI=true ;; esac
 
-# Short-circuit test for an installation
-if [ "$1" = "-test" ]
-then
-    [ "$#" -eq 2 ] || { echo "${0##*/} -test : needs 1 argument"; exit 1; }
-    dir="${2%/}" # <- *_ARCH_PATH
-    [ -d "$dir/include" ] || exit 2
+# Test for library existence
+have_hdf5_lib()
+{
+    local dir="${1%/}"  # <- *_ARCH_PATH (may also include MPI-specific)
+    local verbose="$2"
+    [ -d "$dir" ] || return 2
 
-    package="hdf5"
-    libName="hdf5"
+    local lib
+    local package="hdf5"
+    local libName="libhdf5"
+
     for lib in \
         "$dir/lib/$libName$EXT_SO" \
         "$dir/lib$WM_COMPILER_LIB_ARCH/$libName$EXT_SO" \
@@ -41,12 +44,24 @@ then
     do
         if [ -r "$lib" ]
         then
-            echo "    $package include: $dir/include"
-            echo "    $package library: ${lib%/*}"
-            exit 0
+            if [ -n "$verbose" ]
+            then
+                echo "    $package include: $dir/include"
+                echo "    $package library: ${lib%/*} (${lib##*/})"
+            fi
+            return 0
         fi
     done
-    exit 2
+    return 2
+}
+
+# Short-circuit test for an installation
+if [ "$1" = "-test" ]
+then
+    [ "$#" -eq 2 ] || { echo "${0##*/} -test : needs 1 argument"; exit 1; }
+    [ -d "$2/include" ] || exit 2  # Require include/ dir
+    have_hdf5_lib "$2" -verbose
+    exit $?
 fi
 #------------------------------------------------------------------------------
 if :    # Run from third-party directory
@@ -84,7 +99,7 @@ options:
   -cmake PATH       With cmake from the given path
   -mpi-home PATH    With hint for MPI_HOME
   -no-mpi           Suppress MPI build
-  -DNAME=VALUE      add cmake variable
+  -DNAME=VALUE      Add cmake variable
   -list             List available unpacked source versions
   -help             Display usage help
 
@@ -177,26 +192,22 @@ export GIT_DIR="$PKG_SOURCE/.git"
 #
 # Manual installation of parallel libraries
 # from libdir to -> $FOAM_EXT_LIBBIN/$FOAM_MPI
-#
+# but that also makes it more difficult to handle different versions
 
 echo
 echo ========================================
 echo "Build hdf5 library $PACKAGE for $FOAM_MPI"
-echo
-
-# Install with an MPI-specfic location
-if [ "$FOAM_MPI" != dummy ]
+if [ "${FOAM_MPI:-dummy}" != dummy ]
 then
+    echo "... install with an MPI-specfic location"
     PKG_PREFIX="${PKG_PREFIX}/${FOAM_MPI}"
 fi
+echo
 
 # May need further adjustment...
 if [ -z "$optForce" ] \
 && [ -f "$PKG_PREFIX/include/hdf5.h" ] \
-&& {
-    [ -r "$PKG_PREFIX/lib/libhdf5$EXT_SO" ] \
- || [ -r "$PKG_PREFIX/lib$WM_COMPILER_LIB_ARCH/libhdf5$EXT_SO" ]
-}
+&& have_hdf5_lib "$PKG_PREFIX"
 then
     echo "    HDF5 already built : $PKG_PREFIX"
 else
@@ -205,6 +216,13 @@ else
     echo
     (
         PKG_BUILD="$buildBASE/$PACKAGE"
+        # Use mpi-specific build location
+        if [ "$FOAM_MPI" = dummy ]
+        then
+            PKG_BUILD="${PKG_BUILD}-serial"
+        else
+            PKG_BUILD="${PKG_BUILD}-${FOAM_MPI:-serial}"
+        fi
         cd "$PKG_SOURCE" || exit
 
         applyPatch "$PACKAGE" "$PKG_SOURCE"
@@ -214,12 +232,20 @@ else
         rm -rf "$PKG_BUILD"
         mkdir -p "$PKG_BUILD"
 
+        unset pkgOptions parallelOpts
+
         # May not work properly with FOAM_MPI = dummy
         if [ "$FOAM_MPI" != dummy ]
         then
+            parallelOpts="-DHDF5_ENABLE_PARALLEL=ON"
             CC=mpicc
             CXX=mpicxx
         fi
+
+        # Note: hdf5-1.x used 'Z_LIB_SUPPORT' instead of 'ZLIB_SUPPORT',
+        #       but it was enabled by default anyhow
+        pkgOptions="-DHDF5_ENABLE_ZLIB_SUPPORT=ON"
+        #pkgOptions="$pkgOptions -DHDF5_ENABLE_SZIP_SUPPORT=ON"
 
         cmake=$(findCMake)
 
@@ -231,7 +257,10 @@ else
             -DBUILD_TESTING=FALSE \
             -DBUILD_STATIC_LIBS=FALSE \
             ${WM_QUIET:+-DCMAKE_RULE_MESSAGES=OFF} \
-            -DHDF5_BUILD_FORTRAN=FALSE \
+            $pkgOptions \
+            $parallelOpts \
+            -DHDF5_BUILD_EXAMPLES=OFF \
+            -DHDF5_BUILD_FORTRAN=OFF \
             "$PKG_SOURCE" \
         && make -j $WM_NCOMPPROCS all \
         && make install \

@@ -1,0 +1,53 @@
+--- scotch-v7.0.11/src/libscotch/Makefile.orig	2026-02-11 14:23:44.000000000 +0100
++++ scotch-v7.0.11/src/libscotch/Makefile	2026-04-01 11:07:22.659394836 +0200
+@@ -94,6 +94,14 @@
+ 
+ .PHONY				:	ptscotch	scotch	ptinstall	install	clean	realclean
+ 
++## ---------------
++## windows: provide a direct way to the libscotch target
++##
++ifneq (,$(findstring windows,$(WM_OSTYPE)))
++libscotch			:	libscotch$(LIB) scotch.h
++endif
++## ---------------
++
+ scotch				:
+ 					$(MAKE)						\
+ 					CC="$(CCS)"					\
+@@ -536,6 +544,14 @@
+ 			wgraph_part_zr$(OBJ)			\
+ 			wgraph_store$(OBJ)
+ 
++## ---------------
++## windows: exit handling as part of libscotch (simplifies linking)
++##
++ifneq (,$(findstring windows,$(WM_OSTYPE)))
++LIBSCOTCHDEPS += library_error_exit$(OBJ)
++endif
++## ---------------
++
+ ##
+ ##  Todo list.
+ ##
+--- scotch-v7.0.11/src/Makefile.orig	2026-02-11 14:23:44.000000000 +0100
++++ scotch-v7.0.11/src/Makefile	2026-04-01 11:02:07.883415660 +0200
+@@ -93,8 +93,18 @@
+ $(mandir)/man1			:	$(mandir)
+ 					-$(MKDIR) $(mandir)/man1
+ 
++## ---------------
++## For windows, use direct libscotch target (no executables)
++##
++ifneq (,$(findstring windows,$(WM_OSTYPE)))
++libscotch			:	required
++					(cd libscotch ;      $(MAKE) VERSION=$(VERSION) RELEASE=$(RELEASE) PATCHLEVEL=$(PATCHLEVEL) libscotch && $(MAKE) install)
++else
++
+ libscotch			:	required
+ 					(cd libscotch ;      $(MAKE) VERSION=$(VERSION) RELEASE=$(RELEASE) PATCHLEVEL=$(PATCHLEVEL) scotch && $(MAKE) install)
++endif
++## ---------------
+ 
+ scotch				:	libscotch
+ 					(cd scotch ;         $(MAKE) VERSION=$(VERSION) RELEASE=$(RELEASE) PATCHLEVEL=$(PATCHLEVEL) CODENAME=$(CODENAME) scotch && $(MAKE) install)

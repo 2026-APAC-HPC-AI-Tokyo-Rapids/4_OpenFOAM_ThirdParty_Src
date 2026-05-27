@@ -1,0 +1,227 @@
+#!/bin/sh
+#------------------------------------------------------------------------------
+# =========                 |
+# \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+#  \\    /   O peration     |
+#   \\  /    A nd           | www.openfoam.com
+#    \\/     M anipulation  |
+#------------------------------------------------------------------------------
+#     Copyright (C) 2026 Keysight Technologies
+#------------------------------------------------------------------------------
+# License
+#     This file is part of OpenFOAM, distributed under GPL-3.0-or-later.
+#
+# Script
+#     makeZLIB
+#
+# Description
+#     Build script for zlib
+#
+# Note
+#     cross-compiling creates a static lib
+#
+# ----------------------------------------------
+# NO USER-CONFIGURABLE SETTINGS WITHIN THIS FILE
+#------------------------------------------------------------------------------
+# Dynamic library ending (default is .so)
+[ "$(uname -s)" = Darwin ] && EXT_SO=.dylib || EXT_SO=.so
+
+# Test for library existence
+have_zlib_lib()
+{
+    local dir="${1%/}"  # <- *_ARCH_PATH
+    local verbose="$2"
+    [ -d "$dir" ] || return 2
+
+    local lib
+    local package="zlib"
+    local libName="libz"
+    for lib in \
+        "$dir/lib/$libName.a" \
+        "$dir/lib$WM_COMPILER_LIB_ARCH/$libName.a" \
+        "$dir/lib/$libName$EXT_SO" \
+        "$dir/lib$WM_COMPILER_LIB_ARCH/$libName$EXT_SO" \
+        ;
+    do
+        if [ -r "$lib" ]
+        then
+            if [ -n "$verbose" ]
+            then
+                echo "    $package include: $dir/include"
+                echo "    $package library: ${lib%/*} (${lib##*/})"
+            fi
+            return 0
+        fi
+    done
+    return 2
+}
+
+# Short-circuit test for an installation
+if [ "$1" = "-test" ]
+then
+    [ "$#" -eq 2 ] || { echo "${0##*/} -test : needs 1 argument"; exit 1; }
+    [ -d "$2/include" ] || exit 2  # Require include/ dir
+    have_zlib_lib "$2" -verbose
+    exit $?
+fi
+#------------------------------------------------------------------------------
+if :    # Run from third-party directory
+then
+    cd "${0%/*}" || exit
+    wmakeCheckPwd "$WM_THIRD_PARTY_DIR" 2>/dev/null || {
+        echo "Error (${0##*/}) : not located in \$WM_THIRD_PARTY_DIR"
+        echo "    Check your OpenFOAM environment and installation"
+        exit 1
+    }
+fi
+. "${WM_THIRD_PARTY_DIR:?}"/etc/tools/ThirdPartyFunctions
+#------------------------------------------------------------------------------
+# Obtain version from OpenFOAM etc/config.sh file:
+_foamConfig zlib
+
+PACKAGE="${zlib_version:-none}"
+
+#------------------------------------------------------------------------------
+printVersions() { listPackageVersions zlib; exit 0; }
+printHelp() {
+    cat<<USAGE
+
+Usage: ${0##*/} [OPTION] [zlib-VERSION] [-- configure-options]
+options:
+  -force        Force compilation, even if include/library already exists
+  -gcc          Force use of gcc/g++
+  -list         List available unpacked source versions
+  -static       Build static library
+  -help         Display usage help
+
+* build zlib with
+      ${PACKAGE:-[unspecified]}
+
+USAGE
+    showDownloadHint zlib
+    exit 0  # Clean exit
+}
+#------------------------------------------------------------------------------
+exportCompiler          # Compiler info for CMake/configure
+
+unset optForce optStatic
+
+# Parse options
+while [ "$#" -gt 0 ]
+do
+    case "$1" in
+    '') ;;      # Ignore empty
+    --) break;; # Extra configure options (leave on $@ for later detection)
+    -h | -help*) printHelp;;
+    -list)      printVersions;;
+    -gcc)       useGcc  ;;
+    -force)     optForce=true ;;
+    -static)    optStatic=true ;;
+
+    zlib/* | sources/zlib* | \
+    zlib-[0-9]* | zlib_[0-9]* | zlib-system )
+        PACKAGE="${1%%/}"
+        ;;
+    *)
+        die "unknown option/argument: '$1'"
+        ;;
+    esac
+    shift
+done
+
+if [ -z "$PACKAGE" ]
+then
+    die "The zlib package/version not specified"
+elif _foamIsNone "$PACKAGE" || _foamIsSystem "$PACKAGE"
+then
+    echo "Using none/system (skip ThirdParty build of zlib)"
+    exit 0
+fi
+
+# Avoid extra stuff...
+unset CFLAGS CXXFLAGS
+
+#------------------------------------------------------------------------------
+#
+# Build zlib
+#   *PACKAGE : name-version of the package
+#   *SOURCE  : location of original sources
+#   *PREFIX  : installation directory
+#
+
+# With CMake, but currently seems to still find wrong compiler:
+# cmake -B build \
+#   -DCMAKE_SYSTEM_NAME=Windows \
+#   -DCMAKE_C_COMPILER="$(wmake -show-c)"
+#   -DBUILD_SHARED_LIBS=OFF
+
+PKG_SOURCE="$(findSourceDir "$PACKAGE")"
+PACKAGE="$(basename "$PKG_SOURCE")"
+PKG_PREFIX="$installBASE/$PACKAGE"
+export GIT_DIR="$PKG_SOURCE/.git"
+
+if [ -z "$optForce" ] \
+&& [ -f "$PKG_PREFIX/include/zlib.h" ] \
+&& have_zlib_lib "$PKG_PREFIX"
+then
+    echo "zlib already built : $PKG_PREFIX"
+else
+    echo "Starting build: zlib ($PACKAGE)"
+    echo
+
+    # Static build for cross-compile
+    case "$WM_COMPILER" in
+        (Mingw*) optStatic=true ;;
+    esac
+
+    (
+        # Configuration options:
+        unset configOpt
+
+        if [ "$optStatic" = true ]
+        then
+            configOpt="--static"
+        else
+            configOpt="--shared"
+        fi
+
+        # Additional configure options
+        if [ "$1" = "--" ]
+        then
+            shift
+            configOpt="$configOpt $@"
+        fi
+
+        # End of configuration options
+        # ----------------------------
+        cd "$PKG_SOURCE" || exit
+
+        rm -rf "$PKG_PREFIX"
+
+        set -x
+        ./configure \
+            --prefix="$PKG_PREFIX" \
+            $configOpt \
+        && set +x \
+        && make -j $WM_NCOMPPROCS \
+        && make install \
+        && echo "Built: $PACKAGE" \
+        && pkgconfigAdjust "$PKG_PREFIX"
+    ) || {
+        echo "Error building: $PACKAGE"
+        exit 1
+    }
+
+    # Unneeded generated files
+    for dir in share/doc share/info share/man
+    do
+        if [ -d "$PKG_PREFIX/$dir" ]
+        then
+            echo "Discard $dir files to save space: $PACKAGE"
+            rm -rf "$PKG_PREFIX/$dir"
+        fi
+    done
+    rmdir "$PKG_PREFIX/share" 2> /dev/null || true
+fi
+
+#------------------------------------------------------------------------------

@@ -4,7 +4,7 @@
  
  .PHONY				:	ptscotch	scotch	ptinstall	install	clean	realclean
  
-+ifeq ($(WM_OSTYPE),MSwindows)
++ifneq (,$(findstring windows,$(WM_OSTYPE)))
 +
 +libscotch			:	libscotch$(LIB) scotch.h
 +
@@ -17,7 +17,7 @@
  			wgraph_part_zr$(OBJ)  			\
  			wgraph_store$(OBJ)
  
-+ifeq ($(WM_OSTYPE),MSwindows)
++ifneq (,$(findstring windows,$(WM_OSTYPE)))
 +## Add into libscotch instead of having a separate library
 +LIBSCOTCHDEPS += library_error_exit$(OBJ)
 +endif
@@ -31,7 +31,7 @@
  $(mandir)/man1			:	$(mandir)
  					-$(MKDIR) $(mandir)/man1
  
-+ifeq ($(WM_OSTYPE),MSwindows)
++ifneq (,$(findstring windows,$(WM_OSTYPE)))
 +
 +libscotch			:	required
 +					(cd libscotch ;      $(MAKE) VERSION=$(VERSION) RELEASE=$(RELEASE) PATCHLEVEL=$(PATCHLEVEL) libscotch && $(MAKE) install)

@@ -7,6 +7,7 @@
 #    \\/     M anipulation  |
 #------------------------------------------------------------------------------
 #     Copyright (C) 2018-2021 OpenCFD Ltd.
+#     Copyright (C) 2026 Keysight Technologies
 #------------------------------------------------------------------------------
 # License
 #     This file is part of OpenFOAM, distributed under GPL-3.0-or-later.
@@ -251,6 +252,9 @@ echo
         fi
     ;;
     esac
+
+    # Package in BLAS as well
+    configOpt="$configOpt --download-f2cblaslapack=1"
 
     # Additional configure options
     if [ "$1" = "--" ]
