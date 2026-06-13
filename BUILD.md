@@ -531,11 +531,13 @@ easier to use `grep` and find the relevant pages and links.
 <!-- parallel -->
 [page adios]:     https://csmd.ornl.gov/software/adios2
 [repo adios]:     https://github.com/ornladios/ADIOS2
-[link adios]:     https://github.com/ornladios/ADIOS2/archive/v2.10.1.tar.gz
+[older adios]:    https://github.com/ornladios/ADIOS2/archive/v2.10.1.tar.gz
+[link adios]:     https://github.com/ornladios/ADIOS2/archive/v2.12.1.tar.gz
 
 [page hdf5]:      https://www.hdfgroup.org
 [repo hdf5]:      https://github.com/HDFGroup/hdf5
-[link hdf5]:      https://github.com/HDFGroup/hdf5/archive/refs/tags/hdf5_1.14.6.tar.gz
+[older hdf5]:     https://github.com/HDFGroup/hdf5/archive/refs/tags/hdf5_1.14.6.tar.gz
+[link hdf5]:      https://github.com/HDFGroup/hdf5/archive/refs/tags/2.1.1.tar.gz
 
 [page zfp]:       http://computation.llnl.gov/projects/floating-point-compression/zfp-versions
 
@@ -555,7 +557,7 @@ easier to use `grep` and find the relevant pages and links.
 [link kahip]:     https://github.com/KaHIP/KaHIP/archive/v3.15.tar.gz
 
 [page metis]:     http://glaros.dtc.umn.edu/gkhome/metis/metis/overview
-[link metis]:     http://glaros.dtc.umn.edu/gkhome/fetch/sw/metis/metis-5.1.0.tar.gz
+[link metis]:     https://github.com/KarypisLab/METIS/archive/refs/tags/v5.2.1.tar.gz
 
 [page openmpi]:   http://www.open-mpi.org/
 [older openmpi]:  https://download.open-mpi.org/release/open-mpi/v1.10/openmpi-1.10.7.tar.bz2
@@ -583,6 +585,7 @@ easier to use `grep` and find the relevant pages and links.
 
 [page petsc]:     https://petsc.org/
 [link petsc]:     https://web.cels.anl.gov/projects/petsc/download/release-snapshots/petsc-lite-3.21.2.tar.gz
+[newer petsc]:    https://web.cels.anl.gov/projects/petsc/download/release-snapshots/petsc-lite-3.24.3.tar.gz
 
 [page hypre]:     https://computing.llnl.gov/projects/hypre-scalable-linear-solvers-multigrid-methods/
 [repo hypre]:     https://github.com/hypre-space/hypre/
@@ -621,8 +624,8 @@ easier to use `grep` and find the relevant pages and links.
 [link ParaView511]: https://www.paraview.org/files/v5.11/ParaView-v5.11.2.tar.xz
 [link ParaView512]: https://www.paraview.org/files/v5.12/ParaView-v5.12.1.tar.xz
 [link ParaView513]: https://www.paraview.org/files/v5.13/ParaView-v5.13.2.tar.xz
-[link ParaView]:    https://www.paraview.org/files/v5.13/ParaView-v5.13.2.tar.xz
-[link ParaView]:    https://www.paraview.org/files/v6.0/ParaView-v6.0.1.tar.xz
+[link ParaView601]: https://www.paraview.org/files/v6.0/ParaView-v6.0.1.tar.xz
+[link ParaView]:    https://www.paraview.org/files/v6.1/ParaView-v6.1.1.tar.xz
 
 [page mesa]:  http://mesa3d.org/
 [link mesa]:  ftp://ftp.freedesktop.org/pub/mesa/mesa-17.1.1.tar.xz
@@ -636,4 +639,5 @@ easier to use `grep` and find the relevant pages and links.
 
 ---
 
-Copyright 2016-2025 OpenCFD Ltd
+Copyright 2016-2025 OpenCFD Ltd <br>
+Copyright (C) 2026 Keysight Technologies
