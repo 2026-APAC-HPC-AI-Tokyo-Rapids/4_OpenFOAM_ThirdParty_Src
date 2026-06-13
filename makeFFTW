@@ -55,7 +55,7 @@ have_fftw_lib()
 # Short-circuit test for an installation
 if [ "$1" = "-test" ]
 then
-    [ "$#" -eq 2 ] || { echo "${0##*/} -test : needs 1 argument"; exit 1; }
+    [ "$#" -eq 2 ] || { echo "${0##*/} $1 : needs 1 argument"; exit 1; }
     [ -d "$2/include" ] || exit 2  # Require include/ dir
     have_fftw_lib "$2" -verbose
     exit $?
@@ -163,12 +163,25 @@ else
         unset configOpt
 
         # Compiler-specific adjustments
-        case "$WM_COMPILER" in
-        (Mingw*)
-            # Cross-compiling
+        case "$WM_ARCH/$WM_COMPILER" in
+        (*ARM64/Mingw*)
+            # Cross-compiling [arm64]
+            # See http://www.fftw.org/install/windows.html
+            configOpt="
+  --host=aarch64-w64-mingw32
+  CC=$(wmake -show-path-c)
+  --with-our-malloc
+  --enable-threads --with-combined-threads
+  --enable-neon
+  --with-incoming-stack-boundary=2
+"
+            ;;
+        (*/Mingw*)
+            # Cross-compiling [x86]
             # See http://www.fftw.org/install/windows.html
             configOpt="
   --host=x86_64-w64-mingw32
+  CC=$(wmake -show-path-c)
   --with-our-malloc
   --enable-threads --with-combined-threads
   --enable-sse2
