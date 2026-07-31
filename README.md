@@ -41,6 +41,22 @@ automatically as part of the top-level OpenFOAM `Allwmake`.
 Nonetheless it may be necessary or useful to build particular
 ThirdParty components prior to building OpenFOAM itself.
 
+### Tokyo Rapids v2606 sources
+
+The Git repository contains ThirdParty build scripts and configuration, but not
+the unpacked dependency sources. Before building the Tokyo Rapids OpenFOAM
+v2606 configuration, populate the required sources with:
+
+```bash
+SOURCE_ARCHIVE_CACHE_DIR=/path/to/shared/source-cache \
+  ./download-v2606-sources.sh
+```
+
+The script downloads ADIOS2, CGAL, Boost, FFTW, SCOTCH, and KaHIP into the
+shared archive cache, validates every archive, and extracts them under
+`sources/`. Downloads are published atomically so multiple build jobs can
+safely share the same cache.
+
 ### Sequence
 
 1. `makeGcc` _or_ `makeLLVM` *(optional)*
